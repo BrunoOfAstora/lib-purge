@@ -2,6 +2,7 @@
 
 
 #include "internal_utils.h"
+#include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -18,14 +19,14 @@ int fill_pattern( const char *file_name, unsigned char pattern, size_t buffer_si
 		return -1;
 	}
 
-	unsigned char *buffer;
+	unsigned char *buffer = NULL;
 
 	size_t block_file_size; 
 	size_t remainder_block_file_size;
 
-	long file_size;
+	off_t file_size;
  
-	FILE *file;
+	FILE *file = NULL;
 
 	int return_code = -1;
 
@@ -48,13 +49,13 @@ int fill_pattern( const char *file_name, unsigned char pattern, size_t buffer_si
 		goto cleanup;
 	}
 
-	if (fseek( file, 0L, SEEK_END ) != 0 )
+	if (fseeko( file, 0L, SEEK_END ) != 0 )
 	{
 		perror("Error: fseek could not reach the end of file");
 		goto cleanup;
 	}
 
-	file_size = ftell(file);	
+	file_size = ftello(file);	
 	
 	if(file_size == -1L)
 	{
@@ -68,8 +69,8 @@ int fill_pattern( const char *file_name, unsigned char pattern, size_t buffer_si
 		goto cleanup;
 	}
 
-	block_file_size = (size_t)file_size / buffer_size;
-	remainder_block_file_size = (size_t)file_size % buffer_size;
+	block_file_size = file_size / buffer_size;
+	remainder_block_file_size = file_size % buffer_size;
 
 	rewind(file);
 
@@ -106,6 +107,8 @@ int fill_pattern( const char *file_name, unsigned char pattern, size_t buffer_si
 	return_code = 0;
 
 cleanup:
+	purge_secure_zero_memory(buffer, buffer_size);
+	
 	if(file)
 		fclose(file);
 	
