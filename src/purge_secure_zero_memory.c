@@ -11,13 +11,13 @@
 	}
 		
 
-#elif defined(_WIN32) //For future Windows compatbility
+/* #elif defined(_WIN32) //For future Windows compatbility
 
 	void purge_secure_zero_memory(void *ptr, size_t size)
 	{
 		SecureZeroMemory(ptr, size);
 	}
-
+*/
 
 #else
 
@@ -26,7 +26,7 @@
 		volatile unsigned char *p = ptr;
 		while(size--)
 		{
-		*p++;
+		*p++ = 0;
 		}
 	}
 

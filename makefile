@@ -26,6 +26,7 @@ clean:
 	@rm -rf $(OBJ) $(TARGET)
 
 install:
+	sudo cp $(TARGET) /lib/
 	sudo cp $(TARGET) /usr/local/lib/
 	sudo cp $(INC)/*.h /usr/local/include/
 	sudo ldconfig
