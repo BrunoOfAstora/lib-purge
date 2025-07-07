@@ -5,7 +5,7 @@ OBJ = obj
 TARGET = libpurge.so
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -fPIC -I$(INC)
+CFLAGS = -g -O0 -Wall -Wextra -std=c11 -fPIC -I$(INC)
 
 SOURCES = $(wildcard $(SRC)/*.c)
 OBJECTS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SOURCES))

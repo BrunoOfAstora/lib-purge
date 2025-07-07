@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stddef.h>
 
-#include "internal_utils.h"
+#include "libpurge.h"
 
 #if defined(__STDC_LIB_EXT1)
 
