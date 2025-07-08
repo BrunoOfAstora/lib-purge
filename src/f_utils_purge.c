@@ -1,5 +1,11 @@
 			//f_utils_purge.c//
 
+#define _POSIX_C_SOURCE 200809L
+
+#include <stdio.h>      
+#include <unistd.h>
+#include <sys/file.h>
+#include <fcntl.h>
 #include "libpurge.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -60,14 +66,9 @@ void pg_free(Handler_PG *pg_init)
 	return 0;
 }*/
 
-int _verify_shred(const char *cmp_file, unsigned char cmp_pattern, int buffsize, off_t filesize)
+int _verify_shred(FILE *cmp_file, unsigned char cmp_pattern, int buffsize, off_t filesize)
 {
-	FILE *cmp_open_file = fopen(cmp_file, "rb");
-	if(!cmp_open_file)
-	{
-		perror("failed to open file");
-		return FLCN_OPEN_FILE_ERR;
-	}
+	rewind(cmp_file);	
 	
 	char *cmp_file_buffer = malloc(buffsize);
 	if(!cmp_file_buffer)
@@ -89,7 +90,7 @@ int _verify_shred(const char *cmp_file, unsigned char cmp_pattern, int buffsize,
 
 	for(off_t i = 0; i < block_file_size; i++)
 	{
-		if((fread(cmp_file_buffer, buffsize, 1, cmp_open_file)) != 1)
+		if((fread(cmp_file_buffer, buffsize, 1, cmp_file)) != 1)
 		{
 			printf("fread error in the verify function!\n");
 			break;
@@ -107,7 +108,8 @@ int _verify_shred(const char *cmp_file, unsigned char cmp_pattern, int buffsize,
 	
 	free(cmp_pattern_buffer);
 	free(cmp_file_buffer);
-	fclose(cmp_open_file);
+	
+	rewind(cmp_file);
 
 	return FLCN_SUCCESS;
 } 
@@ -118,8 +120,8 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 {
 	int return_code = -1;
 
-	struct stat buf;
-	int f_status = 0;
+//	struct stat buf;
+//	int f_status = 0;
 		
 	if(pg_opt == NULL || pg_opt->filename == NULL || handler == NULL)
 	{
@@ -139,6 +141,8 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	
 	handler->file_to_encrypt = fopen(pg_opt->filename, "r+b");
 
+	unlink(pg_opt->filename);
+
 	if(!handler->file_to_encrypt)
 	{
 		perror("Error While Opening File");
@@ -146,6 +150,11 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	}
 
 	int file_desc = fileno(handler->file_to_encrypt);
+	if(flock(file_desc, LOCK_EX) != 0)
+	{
+		perror("Failed to lock file");
+		goto cleanup;
+	}
 
 	if (fseeko( handler->file_to_encrypt, 0L, SEEK_END ) != 0 )
 	{
@@ -177,8 +186,7 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	if(passes <= 0)
 	{
 		perror("Passes can't be 0 or lower");
-		goto cleanup;
-	
+		goto cleanup;	
 	}
 	
 
@@ -207,17 +215,6 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 		passes--;
 	}
 
-	printf("Verifying...\n");
-	int ver = _verify_shred(pg_opt->filename, pg_opt->pattern, 256,handler->filesize);
-	
-	if(ver == 0)
-	{
-		printf("Verification: Success.\n");
-	}
-	else
-	{
-		printf("Verification: Failed.\n");
-	}
 
 	if(fflush(handler->file_to_encrypt) != 0)
 	{
@@ -231,10 +228,25 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 		goto cleanup;
 	}
 
+	
+	printf("Verifying...\n");
+	int ver = _verify_shred(handler->file_to_encrypt, pg_opt->pattern, 256,handler->filesize);
+	
+	if(ver == 0)
+	{
+		printf("Verification: Success.\n");
+	}
+	else
+	{
+		printf("Verification: Failed.\n");
+	}
+
 	return_code = 0;
 
 cleanup:
 	purge_secure_zero_memory(handler->buffer, pg_opt->buffer_size);
+
+	flock(file_desc, LOCK_UN);
 	
 	if(handler->file_to_encrypt)
 		fclose(handler->file_to_encrypt);
