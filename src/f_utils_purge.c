@@ -2,7 +2,8 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stdio.h>      
+#include <stdio.h>   
+#include <sys/statvfs.h>   
 #include <unistd.h>
 #include <sys/file.h>
 #include <fcntl.h>
@@ -19,12 +20,12 @@
 
 typedef struct Handler_Purge_Internal
 {
+	
 	off_t filesize;
 	unsigned char *buffer;
 	FILE *file_to_encrypt;
 	
 }Handler_PG;
-
 
 
 //Handler "Constructor"
@@ -44,8 +45,6 @@ Handler_PG *pg_create(void)
 	return pg_init;
 }
 
-
-
 //Handler free
 void pg_free(Handler_PG *pg_init)
 {
@@ -60,11 +59,45 @@ void pg_free(Handler_PG *pg_init)
 	return;
 }
 
-//Function to wipe free space on disk
-/*int fs_wipe()
+int wipe_free_space(const Purge_opt *pg_opt)
 {
-	return 0;
-}*/
+	struct statvfs st;
+
+	unsigned long f_space_avail = 0;
+
+	unsigned long stat = statvfs(pg_opt->partpath, &st); //The partpath (partition path) is the path of partition where you'll wipe
+		
+	if((f_space_avail = st.f_bavail * st.f_frsize) == 0)
+	{
+		printf("error: the free space available is 0\n");
+		return FLCN_AVAIL_SPACE_ERR;
+	}	
+
+	unsigned char *buffer = malloc(pg_opt->buffer_size);
+	if(!buffer)
+	{
+		perror("error: error while alocating memory in fs_wipe function\n");
+		return FLCN_MALLOC_ERR;
+	}
+
+	memset(buffer, pg_opt->pattern, pg_opt->buffer_size);
+
+	int fd;
+	
+	fd = open("_flcn-purge-freespace_", O_CREAT | O_APPEND | O_RDWR, 0777);
+	unsigned long i = 0;
+
+	//calculate free space and remaider space
+	while(i < f_space_avail)
+	{
+		write(fd, buffer, pg_opt->buffer_size);
+		i += pg_opt->buffer_size;
+	}
+	
+	remove("_flcn-purge-freespace_");
+
+	return FLCN_SUCCESS;
+}
 
 int _verify_shred(FILE *cmp_file, unsigned char cmp_pattern, int buffsize, off_t filesize)
 {
@@ -140,12 +173,21 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	memset( handler->buffer, pg_opt->pattern, pg_opt->buffer_size );
 	
 	handler->file_to_encrypt = fopen(pg_opt->filename, "r+b");
-
-	unlink(pg_opt->filename);
-
 	if(!handler->file_to_encrypt)
 	{
 		perror("Error While Opening File");
+		goto cleanup;
+	}
+
+	if((unlink(pg_opt->filename)) != 0)
+	{
+		perror("failed to unlink the file from filesystem");
+		goto cleanup;
+	}
+
+	if(fsync(fileno(handler->file_to_encrypt)) != 0)
+	{
+		perror("Error Syncing File");
 		goto cleanup;
 	}
 

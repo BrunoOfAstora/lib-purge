@@ -13,6 +13,7 @@
 #define FLCN_MALLOC_ERR -1
 #define FLCN_OPEN_FILE_ERR -2
 #define FLCN_VERIFY_DIFF_ERR -3
+#define FLCN_AVAIL_SPACE_ERR -4
 
 #ifdef __cplusplus
 extern "C"{
@@ -22,6 +23,7 @@ typedef struct Handler_Purge_Internal Handler_PG;
 
 typedef struct PurgeOption
 {
+	const char *partpath;
 	const char *filename;
 	unsigned char pattern;
 	size_t buffer_size;
@@ -34,7 +36,7 @@ void purge_secure_zero_memory(void *ptr, size_t size);
 
 int file_wipe(Handler_PG *handler, const Purge_opt *pg_opt);
 
-int wipe_free_space();
+int wipe_free_space(const Purge_opt *pg_opt);
 
 int purge_scrub_metadata();
 
