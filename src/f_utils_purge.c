@@ -34,7 +34,6 @@ Handler_PG *pg_create(void)
 	Handler_PG *pg_init = malloc(sizeof(struct Handler_Purge_Internal));
 	if(!pg_init)
 	{
-		perror("malloc error in Handler_PG struct");
 		return NULL;
 	}
 
@@ -69,14 +68,20 @@ int wipe_free_space(const Purge_opt *pg_opt)
 		
 	if((f_space_avail = st.f_bavail * st.f_frsize) == 0)
 	{
+<<<<<<< HEAD
 		printf("error: the free space available is 0\n");
+=======
+>>>>>>> origin/main
 		return FLCN_AVAIL_SPACE_ERR;
 	}	
 
 	unsigned char *buffer = malloc(pg_opt->buffer_size);
 	if(!buffer)
 	{
+<<<<<<< HEAD
 		perror("error: error while alocating memory in fs_wipe function\n");
+=======
+>>>>>>> origin/main
 		return FLCN_MALLOC_ERR;
 	}
 
@@ -93,7 +98,11 @@ int wipe_free_space(const Purge_opt *pg_opt)
 		write(fd, buffer, pg_opt->buffer_size);
 		i += pg_opt->buffer_size;
 	}
+<<<<<<< HEAD
 	
+=======
+//add tempfile	
+>>>>>>> origin/main
 	remove("_flcn-purge-freespace_");
 
 	return FLCN_SUCCESS;
@@ -101,21 +110,17 @@ int wipe_free_space(const Purge_opt *pg_opt)
 
 int _verify_shred(FILE *cmp_file, unsigned char cmp_pattern, int buffsize, off_t filesize)
 {
+	int return_code = -6;
+
 	rewind(cmp_file);	
-	
+
 	char *cmp_file_buffer = malloc(buffsize);
 	if(!cmp_file_buffer)
-	{
-		perror("malloc error in _verify_shred function, could not initialize verify function\n");
 		return FLCN_MALLOC_ERR;
-	}
 
 	char *cmp_pattern_buffer = malloc(buffsize);
-	if(!cmp_file_buffer)
-	{
-		printf("malloc error in _verify_shred function, could not initialize verify function\n");
+	if(!cmp_pattern_buffer)
 		return FLCN_MALLOC_ERR;
-	}
 
 	memset(cmp_pattern_buffer, cmp_pattern, buffsize);
 
@@ -125,13 +130,12 @@ int _verify_shred(FILE *cmp_file, unsigned char cmp_pattern, int buffsize, off_t
 	{
 		if((fread(cmp_file_buffer, buffsize, 1, cmp_file)) != 1)
 		{
-			printf("fread error in the verify function!\n");
+			return_code = FLCN_FREAD_ERR;
 			break;
 		}
 		
 		if((memcmp(cmp_file_buffer, cmp_pattern_buffer, buffsize)) != 0)
 		{
-			printf("the file was not shredded properly, the file checking resulted in blocks of memory that were not defined in pattern\n");
 			free(cmp_pattern_buffer);
 			free(cmp_file_buffer);
 
@@ -143,8 +147,9 @@ int _verify_shred(FILE *cmp_file, unsigned char cmp_pattern, int buffsize, off_t
 	free(cmp_file_buffer);
 	
 	rewind(cmp_file);
-
-	return FLCN_SUCCESS;
+	
+	return_code = FLCN_SUCCESS;
+	return return_code;
 } 
 
 
@@ -157,16 +162,14 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 //	int f_status = 0;
 		
 	if(pg_opt == NULL || pg_opt->filename == NULL || handler == NULL)
-	{
-		fprintf(stderr, "Error: You need to specify the parameters and the file name\n");
-		return -1;
-	}	
+		return FLCN_INIT_ERR;
+	
 
 	handler->buffer = malloc(pg_opt->buffer_size);
 
 	if(handler->buffer == NULL)
-	{
-		perror("\nMemory allocation failed\n");
+	{	
+		return_code = FLCN_EMPTY_BUFF_ERR;
 		goto cleanup;
 	}
 	
@@ -175,7 +178,19 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	handler->file_to_encrypt = fopen(pg_opt->filename, "r+b");
 	if(!handler->file_to_encrypt)
 	{
-		perror("Error While Opening File");
+		return_code = FLCN_OPEN_FILE_ERR;
+		goto cleanup;
+	}
+
+	if((unlink(pg_opt->filename)) != 0)
+	{
+		return_code = FLCN_UNLINK_ERR;
+		goto cleanup;
+	}
+
+	if(fsync(fileno(handler->file_to_encrypt)) != 0)
+	{
+		return_code = FLCN_SYNC_ERR;
 		goto cleanup;
 	}
 
@@ -194,13 +209,11 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	int file_desc = fileno(handler->file_to_encrypt);
 	if(flock(file_desc, LOCK_EX) != 0)
 	{
-		perror("Failed to lock file");
 		goto cleanup;
 	}
 
 	if (fseeko( handler->file_to_encrypt, 0L, SEEK_END ) != 0 )
 	{
-		perror("Error: fseek could not reach the end of file");
 		goto cleanup;
 	}
 
@@ -208,13 +221,12 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	
 	if(handler->filesize == -1L)
 	{
-		perror("Error: ftell failed");
 		goto cleanup;
 	}
 
 	else if(handler->filesize == 0)
 	{
-		perror("The file is empty. file size = 0");
+		return_code = FLCN_EMPTY_FILE;
 		goto cleanup;
 	}
 
@@ -224,10 +236,8 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 	rewind(handler->file_to_encrypt);
 
 	int passes = pg_opt->num_passes;
-
 	if(passes <= 0)
 	{
-		perror("Passes can't be 0 or lower");
 		goto cleanup;	
 	}
 	
@@ -241,7 +251,6 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 			
 			if(fwrite(handler->buffer, pg_opt->buffer_size, 1, handler->file_to_encrypt) != 1)
 			{
-				perror("Error Writing full block");
 				goto cleanup;
 			}
 		}
@@ -250,7 +259,6 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 		{	
 			if(fwrite(handler->buffer, r_bfsize, 1, handler->file_to_encrypt) != 1)
 			{
-				perror("Error writing remainder block");
 				goto cleanup;
 			}
 		}
@@ -260,30 +268,24 @@ int file_wipe( Handler_PG *handler, const Purge_opt *pg_opt )
 
 	if(fflush(handler->file_to_encrypt) != 0)
 	{
-		perror("Error Flushing File");
+		return_code = FLCN_FLUSH_ERR;
 		goto cleanup;
 	}
 		
 	if(fsync(fileno(handler->file_to_encrypt)) != 0)
 	{
-		perror("Error Syncing File");
+		return_code = FLCN_SYNC_ERR;
 		goto cleanup;
 	}
 
 	
-	printf("Verifying...\n");
-	int ver = _verify_shred(handler->file_to_encrypt, pg_opt->pattern, 256,handler->filesize);
+	int ver = _verify_shred(handler->file_to_encrypt, pg_opt->pattern, pg_opt->buffer_size,handler->filesize);
 	
 	if(ver == 0)
-	{
-		printf("Verification: Success.\n");
-	}
+		return_code = FLCN_SUCCESS;			
+	
 	else
-	{
-		printf("Verification: Failed.\n");
-	}
-
-	return_code = 0;
+		return_code = FLCN_VERIFY_ERR;
 
 cleanup:
 	purge_secure_zero_memory(handler->buffer, pg_opt->buffer_size);

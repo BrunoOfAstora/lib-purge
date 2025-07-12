@@ -9,11 +9,32 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+<<<<<<< HEAD
 #define FLCN_SUCCESS 0
 #define FLCN_MALLOC_ERR -1
 #define FLCN_OPEN_FILE_ERR -2
 #define FLCN_VERIFY_DIFF_ERR -3
 #define FLCN_AVAIL_SPACE_ERR -4
+=======
+typedef enum
+{
+	FLCN_SUCCESS = 0,
+	FLCN_MALLOC_ERR = -1,
+	FLCN_OPEN_FILE_ERR = -2,
+	FLCN_VERIFY_DIFF_ERR = -3,
+ 	FLCN_AVAIL_SPACE_ERR = -4,
+	FLCN_VERIFY_ERR = -5,
+	FLCN_INIT_ERR = -6,
+	FLCN_EMPTY_BUFF_ERR = -7,
+	FLCN_UNLINK_ERR = -8,
+	FLCN_SYNC_ERR = -9,
+	FLCN_FLUSH_ERR = -10,
+	FLCN_EMPTY_FILE = -11,
+	FLCN_FWRITE_ERR = -12,
+	FLCN_FREAD_ERR = -13
+
+}flcn_error_t;
+>>>>>>> origin/main
 
 #ifdef __cplusplus
 extern "C"{
