@@ -18,15 +18,15 @@
 
 typedef struct Pg_handler
 {
-			off_t	filesize;
+	off_t			filesize;
 
 	unsigned char 	*buffer;
 
-			  int 	filedesc;
+	int 			filedesc;
 
 }pg_handler;
 
-
+//"Constructor"
 struct Pg_handler *pg_init(void)
 {
 	struct Pg_handler *pg_init = malloc(sizeof(struct Pg_handler));
@@ -35,12 +35,13 @@ struct Pg_handler *pg_init(void)
 		return NULL;
 	
 	pg_init->filesize = 0;
-	  pg_init->buffer = NULL;
+	pg_init->buffer   = NULL;
 	pg_init->filedesc = 0;
 
 	return pg_init;
 }
 
+//"Destructor"
 void pg_free(pg_handler *pg_init)
 {
 	if(pg_init)
@@ -64,7 +65,7 @@ void pg_free(pg_handler *pg_init)
  *	#######################
  */
 
-int _verifyws(const pg_opt *pg_opt, pg_handler *handler )
+int _verifyws(off_t buffer_s, const pg_opt *pg_opt, pg_handler *handler )
 {
 	int ret_code = PG_INIT_ERR;
 
@@ -74,21 +75,21 @@ int _verifyws(const pg_opt *pg_opt, pg_handler *handler )
 		goto ret;
 	}
 
-	char *cmp_buffer = malloc(pg_opt->buffer_s);
+	char *cmp_buffer = malloc(buffer_s);
 	if(!cmp_buffer)
 	{
 		ret_code = PG_MALLOC_ERR;
 		goto ret;
 	}
 	
-	if((memset(cmp_buffer, pg_opt->pattern, pg_opt->buffer_s)) == NULL)
+	if((memset(cmp_buffer, pg_opt->pattern, buffer_s)) == NULL)
 	{
 		ret_code = PG_MEMSET_ERR;
 		goto ret;
 	}
 
-	off_t bf_size = handler->filesize / pg_opt->buffer_s;
-	off_t rf_size = handler->filesize % pg_opt->buffer_s;
+	off_t bf_size = handler->filesize / buffer_s;
+	off_t rf_size = handler->filesize % buffer_s;
 
 	if(bf_size < 0)
 	{
@@ -96,24 +97,24 @@ int _verifyws(const pg_opt *pg_opt, pg_handler *handler )
 		goto ret;
 	}
 
-	unsigned char *new_buffer = malloc(pg_opt->buffer_s);
+	unsigned char *new_buffer = malloc(buffer_s);
 	if(!new_buffer)
 	{
 		ret_code = PG_MALLOC_ERR;
 		goto ret;
 	}
 
-	memset(new_buffer, pg_opt->pattern, pg_opt->buffer_s);
+	memset(new_buffer, pg_opt->pattern, buffer_s);
 
 	for(off_t i = 0; i < bf_size; i++)
 	{
-		if((read(pg_opt->file_pg, cmp_buffer, pg_opt->buffer_s)) == -1)
+		if((read(pg_opt->file_pg, cmp_buffer, buffer_s)) == -1)
 		{
 			ret_code = PG_READ_ERR;
 			goto ret;
 		}
 
-		if((memcmp(cmp_buffer, new_buffer, pg_opt->buffer_s)) != 0)
+		if((memcmp(cmp_buffer, new_buffer, buffer_s)) != 0)
 		{
 			ret_code = PG_VERIFY_DIFF_ERR;
 			goto ret;
@@ -144,7 +145,11 @@ ret:
 	return ret_code;	
 }
 
-
+/*
+ *	################
+ *	#Flush Options##
+ *	################
+ */
 int pg_flush(int fd, unsigned int flush_opt)
 {
 	if(flush_opt & PG_FLUSH_FILE)
@@ -165,6 +170,7 @@ int pg_flush(int fd, unsigned int flush_opt)
 return PG_SUCCESS;
 }
 
+
 /*
  *	####################
  *	#File wipe Function#
@@ -179,7 +185,25 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 		goto ret;
 
 
-	handler->buffer = malloc(pg_opt->buffer_s);
+	if((handler->filesize = lseek(pg_opt->file_pg, 0, SEEK_END)) == -1)
+	{
+		ret_code = PG_INVALID_FSIZE;
+		goto ret;
+	}
+
+	off_t ebuffer_s = 0;
+
+		off_t block_s = handler->filesize / pg_opt->buffer_s;	
+	off_t remainder_s = handler->filesize % pg_opt->buffer_s;
+
+	if(pg_opt->buffer_s > handler->filesize)
+		ebuffer_s = handler->filesize;
+
+	else
+		ebuffer_s = pg_opt->buffer_s;
+
+
+	handler->buffer = malloc(ebuffer_s);
 	if(handler->buffer == NULL)
 	{
 		ret_code = PG_MALLOC_ERR;
@@ -187,19 +211,12 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 	}
 
 
-	if((memset(handler->buffer, pg_opt->pattern, pg_opt->buffer_s)) == NULL)
+	if((memset(handler->buffer, pg_opt->pattern, ebuffer_s)) == NULL)
 	{
 		ret_code = PG_MEMSET_ERR;
 		goto ret;
 	}
 	
-
-	if((unlink(fname)) != 0)
-	{
-		ret_code = PG_UNLINK_ERR;
-		goto ret;
-	}
-
 
 	if(flush == true)
 		if((pg_flush(pg_opt->file_pg, flush_opt)) != PG_SUCCESS)
@@ -208,16 +225,12 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 			goto ret;
 		}
 
-	if((handler->filesize = lseek(pg_opt->file_pg, 0, SEEK_END)) == -1)
-	{
-		ret_code = PG_INVALID_FSIZE;
-		goto ret;
-	}
-
-
-		off_t block_s = handler->filesize / pg_opt->buffer_s;	
-	off_t remainder_s = handler->filesize % pg_opt->buffer_s;
-
+//
+//
+//
+//
+//
+//
 	
 	if((lseek(pg_opt->file_pg, 0, SEEK_SET)) == -1)
 	{
@@ -242,7 +255,7 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 		
 		for(off_t i = 0; i < block_s; i++)
 		{
-			if((write(pg_opt->file_pg, handler->buffer, pg_opt->buffer_s)) == -1)
+			if((write(pg_opt->file_pg, handler->buffer, ebuffer_s)) == -1)
 			{
 				ret_code = PG_WRITE_ERR;
 				goto ret;
@@ -269,7 +282,7 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 		}
 
 	if(verify == true)
-		if((_verifyws(pg_opt, handler)) != PG_SUCCESS)
+		if((_verifyws(ebuffer_s, pg_opt, handler)) != PG_SUCCESS)
 		{
 			ret_code = PG_VERIFY_DIFF_ERR;
 			goto ret;
@@ -279,12 +292,19 @@ int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char * fname, bool ve
 
 ret:
 	
-	pg_securezeromemory(handler->buffer, pg_opt->buffer_s);
+	pg_securezeromemory(handler->buffer, ebuffer_s);
 
 //	lock(handler->filedesc, LOCK_UN);
 
 	if(pg_opt->file_pg)
 		close(pg_opt->file_pg);
+
+
+	if((unlink(fname)) != 0)
+	{
+		ret_code = PG_UNLINK_ERR;
+		goto ret;
+	}
 	
 	return ret_code;
 }
