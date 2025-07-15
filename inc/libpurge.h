@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 
 //Error Codes:
@@ -52,12 +53,12 @@ typedef struct Pg_options
 	int 			file_pg;
 	unsigned int 	passes;	
 	unsigned char 	pattern;
-	size_t			buffer_s;
+	off_t			buffer_s;
 	bool			rand_pass;
 
 }pg_opt;
 
-int _verifyws();
+int _verifyws(off_t buffer_s, const pg_opt *pg_opt, pg_handler *handler);
 
 struct Pg_handler *pg_init(void);
 void pg_free(struct Pg_handler *pg_init);
