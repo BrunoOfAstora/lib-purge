@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _POSIX_C_SOURCE_200809L
 
 #ifndef LIBPURGE_H
 #define LIBPURGE_H
@@ -9,66 +9,61 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-<<<<<<< HEAD
-#define FLCN_SUCCESS 0
-#define FLCN_MALLOC_ERR -1
-#define FLCN_OPEN_FILE_ERR -2
-#define FLCN_VERIFY_DIFF_ERR -3
-#define FLCN_AVAIL_SPACE_ERR -4
-=======
+
+//Error Codes:
 typedef enum
 {
-	FLCN_SUCCESS = 0,
-	FLCN_MALLOC_ERR = -1,
-	FLCN_OPEN_FILE_ERR = -2,
-	FLCN_VERIFY_DIFF_ERR = -3,
- 	FLCN_AVAIL_SPACE_ERR = -4,
-	FLCN_VERIFY_ERR = -5,
-	FLCN_INIT_ERR = -6,
-	FLCN_EMPTY_BUFF_ERR = -7,
-	FLCN_UNLINK_ERR = -8,
-	FLCN_SYNC_ERR = -9,
-	FLCN_FLUSH_ERR = -10,
-	FLCN_EMPTY_FILE = -11,
-	FLCN_FWRITE_ERR = -12,
-	FLCN_FREAD_ERR = -13
+	PG_SUCCESS 			=	 0,
+	PG_MALLOC_ERR 		= 	-1,
+	PG_OPEN_FILE_ERR 	= 	-2,
+	PG_VERIFY_DIFF_ERR 	= 	-3,
+ 	PG_AVAIL_SPACE_ERR 	= 	-4,
+	PG_VERIFY_ERR 		= 	-5,
+	PG_INIT_ERR 		= 	-6,
+	PG_EMPTY_BUFF_ERR 	= 	-7,
+	PG_UNLINK_ERR 		= 	-8,
+	PG_SYNC_ERR 		= 	-9,
+	PG_FLUSH_ERR 		= 	-10,
+	PG_EMPTY_FILE 		= 	-11,
+	PG_FWRITE_ERR 		= 	-12,
+	PG_FREAD_ERR 		= 	-13,
+	PG_FSET_ERR			= 	-14,
+	PG_FEND_ERR			=	-15,
+	PG_MEMSET_ERR		=	-16,
+	PG_INVALID_FSIZE	=	-17,
+	PG_READ_ERR			=	-18,
+	PG_WRITE_ERR		=	-19,
+	PG_SEEK_ERR			=	-20
 
 }flcn_error_t;
->>>>>>> origin/main
 
-#ifdef __cplusplus
-extern "C"{
-#endif
 
-typedef struct Handler_Purge_Internal Handler_PG;
+//Flush modes
+#define PG_FLUSH_FILE 	0x01
+#define PG_FLUSH_FS   	0x02
+#define PG_FLUSH_DATA	0x03
+#define PG_FLUSH_ALL 	0x04
 
-typedef struct PurgeOption
+typedef struct Pg_handler pg_handler;
+
+typedef struct Pg_options
 {
-	const char *partpath;
-	const char *filename;
-	unsigned char pattern;
-	size_t buffer_size;
-	int num_passes;
-	bool random_pass;
 
-}Purge_opt;
+	int 			file_pg;
+	unsigned int 	passes;	
+	unsigned char 	pattern;
+	size_t			buffer_s;
+	bool			rand_pass;
 
-void purge_secure_zero_memory(void *ptr, size_t size);
+}pg_opt;
 
-int file_wipe(Handler_PG *handler, const Purge_opt *pg_opt);
+int _verifyws();
 
-int wipe_free_space(const Purge_opt *pg_opt);
+struct Pg_handler *pg_init(void);
+void pg_free(struct Pg_handler *pg_init);
 
-int purge_scrub_metadata();
+int pg_securezeromemory(void *handler, size_t size);
 
-int purge_timestomp();
-
-Handler_PG *pg_create(void);
-
-void pg_free(Handler_PG *pg_create);
-
-#ifdef __cplusplus
-}
-#endif
+int fwipe(pg_handler *handler, const pg_opt *pg_opt, const char *fname, bool verify, bool flush, unsigned int flush_opt);
 
 #endif
