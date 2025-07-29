@@ -1,8 +1,7 @@
 #include "libpurge_wp.h"
+#include "libpurge_mem.h"
+#include <stdlib.h>
 #include <unistd.h>
-
-
-
 
 int pg_shred_zero(pgwipe *pg, size_t buffsize)
 {
@@ -12,15 +11,33 @@ int pg_shred_zero(pgwipe *pg, size_t buffsize)
 	off_t bl = BLOCK_SIZE(pg->fsize, buffsize);
 	off_t br = BLOCK_REMA(pg->fsize, buffsize);
 
+	char *buf = malloc(buffsize);
+	if(buf == NULL)
+		return 2;
+	
+	pg_memset(buf, '0', buffsize);
+
 	for(off_t i = 0; i < bl; i++)
-		if((write(pg->fd, 0, 1)) == -1)
-			return 2;
+	{
+		if((write(pg->fd, buf, buffsize)) != (ssize_t)buffsize)
+			goto end;
+	}
 
-	for(off_t i = 0; i < br; i++);
-		if((write(pg->fd, 0, 1)) == -1)
-			return 3;
+	fsync(pg->fd);
 
-	return 0;
+	for(off_t i = 0; i < br; i++)
+	{
+		if((write(pg->fd, buf, br)) != (ssize_t)buffsize)
+			goto end;
+	}
+
+	fsync(pg->fd);
+
+	free(buf);
+
+end:
+	free(buf);
+	return 3;
 }
 
 int pg_shred_guttman(pgwipe *pg, size_t buffsize)

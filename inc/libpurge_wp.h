@@ -20,21 +20,16 @@ typedef enum
 
 }strategy;
 
+typedef struct pgwipe pgwipe;
+
 typedef struct pg_modules
 {
 	const int strat;
-	int (*wipe)(struct pgwipe *pg, size_t buffsize);
+	int (*wipe)( pgwipe *pg, size_t buffsize );
 
 }pg_modules;
 
-/*
-pg_modules pgmod[] = 
-{
-	{ZERO, pg_shred_zero }
-	{}
-	{}
-}
-*/
+extern pg_modules pgmod[];
 
 typedef struct pgwipe
 {
