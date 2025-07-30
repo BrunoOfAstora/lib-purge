@@ -9,6 +9,9 @@
 
 static inline int pg_wblock_loop(int fd, const void *buf, off_t bl, size_t size)
 {
+	if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
+			return 2;
+
 	for(off_t i = 0; i < bl; i++)
 	{
 		if((write(fd, buf, size)) != (ssize_t)size)
@@ -19,6 +22,9 @@ static inline int pg_wblock_loop(int fd, const void *buf, off_t bl, size_t size)
 
 static inline int pg_wremainder(int fd, const void *buf, off_t br)
 {
+	if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
+			return 2;
+
 	if(br > 0)
 	{
 		if((write(fd, buf, br)) != (ssize_t)br)
