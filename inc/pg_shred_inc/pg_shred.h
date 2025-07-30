@@ -1,5 +1,5 @@
-#ifndef LIBPURGE_WP_H
-#define LIBPURGE_WP_H
+#ifndef PG_SHRED_H
+#define PG_SHRED_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -17,7 +17,6 @@ typedef enum
 	NIST,
 	HMG,
 	DOD
-
 }strategy;
 
 typedef struct pgwipe pgwipe;
@@ -26,7 +25,6 @@ typedef struct pg_modules
 {
 	const int strat;
 	int (*wipe)( pgwipe *pg, size_t buffsize );
-
 }pg_modules;
 
 extern pg_modules pgmod[];
@@ -35,9 +33,7 @@ typedef struct pgwipe
 {
 	off_t			fsize;
 	int 			fd;
-
 	const pg_modules *strat;
-
 }pgwipe;
 
 int pg_fwipe_init( pgwipe **pg_ctx, strategy strat, int fd );
@@ -45,19 +41,5 @@ int pg_fwipe_init( pgwipe **pg_ctx, strategy strat, int fd );
 int pg_fwipe_digest( pgwipe *pg, size_t buffsize );
 
 int pg_fwipe_final( pgwipe *pg );
-
-
-
-int pg_shred_zero(pgwipe *pg, size_t buffsize);
-
-int pg_shred_guttman(pgwipe *pg, size_t buffsize);
-
-int pg_shred_vsitr(pgwipe *pg, size_t buffsize);
-
-int pg_shred_nist(pgwipe *pg, size_t buffsize);
-
-int pg_shred_hmg(pgwipe *pg, size_t buffsize);
-
-int pg_shred_dod(pgwipe *pg, size_t buffsize);
 
 #endif

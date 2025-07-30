@@ -1,17 +1,17 @@
-SRC = src
-INC = inc
-OBJ = obj
+SRC := src
+INC := inc
+OBJ := obj
 
-TARGET = libpurge.so
+TARGET := libpurge.so
 
-CC = gcc
-CFLAGS = -g -O0 -Wall -Wextra -std=c11 -fPIC -I$(INC)
+CC := gcc
+CFLAGS := -g -O0 -Wall -Wextra -std=c11 -fPIC $(addprefix -I,$(shell find $(INC) -type d))
 
-SOURCES = $(wildcard $(SRC)/*.c)
-OBJECTS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SOURCES))
-DEP = $(OBJECTS:.o=.d)
+SOURCES := $(shell find $(SRC) -name '*.c')
+OBJECTS := $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SOURCES))
+DEP := $(OBJECTS:.o=.d)
 
-.PHONY: all clean
+.PHONY: all clean install
 
 all: $(TARGET)
 
@@ -19,16 +19,16 @@ $(TARGET): $(OBJECTS)
 	$(CC) -shared -o $@ $(OBJECTS)
 
 $(OBJ)/%.o: $(SRC)/%.c
-	@mkdir -p $(OBJ) 
-	$(CC) $(CFLAGS) -c $< -o $@
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -c $< -o $@
 
 clean:
 	@rm -rf $(OBJ) $(TARGET)
 
 install:
-	sudo cp $(TARGET) /lib/
 	sudo cp $(TARGET) /usr/local/lib/
-	sudo cp $(INC)/*.h /usr/local/include/
+	sudo cp $(shell find $(INC) -name '*.h') /usr/local/include/
 	sudo ldconfig
 
 -include $(DEP)
+
