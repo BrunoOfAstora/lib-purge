@@ -2,13 +2,8 @@
 
 bool pg_memcmp(void *blk1, void *blk2, off_t size)
 {
-	if(blk1 == NULL || blk2 == NULL)
-		return false;
-
-	const unsigned char *cpy_blk1 = ( const unsigned char * ) blk1;
-	const unsigned char *cpy_blk2 = ( const unsigned char * ) blk2;
-
-	volatile unsigned char flag = 0;
+	const volatile unsigned char *cpy_blk1 = ( const volatile unsigned char * ) blk1;
+	const volatile unsigned char *cpy_blk2 = ( const volatile unsigned char * ) blk2;
 
 	off_t i = 0;
 
